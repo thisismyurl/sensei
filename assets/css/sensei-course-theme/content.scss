@@ -95,6 +95,16 @@ body {
 	}
 
 
+	// The horizontal layout for the lesson action buttons previously lived only in
+	// the max-width media query below, while the desktop fallback relied on a
+	// `float` rule that ships in a stylesheet not enqueued on Learning Mode. That
+	// left the buttons stacking on desktop (#8192). Lay them out in a row here at
+	// all widths; the media query keeps the mobile full-width treatment.
+	.sensei-lesson-footer .sensei-buttons-container {
+		display: flex;
+		gap: 1.25rem;
+	}
+
 	@media screen and (max-width: $break-medium) {
 		.sensei-lesson-footer {
 
