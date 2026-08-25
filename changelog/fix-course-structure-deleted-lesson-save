@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix saving a course structure failing with a permission error when a deleted lesson still appears in the course outline.

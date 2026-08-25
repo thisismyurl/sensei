@@ -747,6 +747,84 @@ class Sensei_REST_API_Course_Structure_Controller_Tests extends WP_Test_REST_Tes
 		$this->assertEquals( 403, $response_status );
 	}
 
+	public function testSaveCourseStructure_WhenLessonDeletedFromOutline_DropsItAndSaves() {
+		/* Arrange */
+		$this->login_as_teacher();
+		$course_id    = $this->factory->course->create();
+		$surviving_id = $this->factory->lesson->create();
+		$deleted_id   = $this->factory->lesson->create();
+		$structure    = array(
+			array(
+				'type'  => 'lesson',
+				'title' => 'Surviving lesson',
+				'id'    => $surviving_id,
+			),
+			array(
+				'type'  => 'lesson',
+				'title' => 'Deleted lesson',
+				'id'    => $deleted_id,
+			),
+		);
+
+		// Delete a lesson while it still appears in the submitted outline.
+		wp_delete_post( $deleted_id, true );
+
+		$request = new WP_REST_Request( 'POST', '/sensei-internal/v1/course-structure/' . $course_id );
+		$request->set_header( 'content-type', 'application/json' );
+		$request->set_body( wp_json_encode( [ 'structure' => $structure ] ) );
+
+		/* Act */
+		$response = $this->server->dispatch( $request );
+
+		/* Assert */
+		$this->assertEquals( 200, $response->get_status() );
+		$lesson_ids = wp_list_pluck( $response->get_data(), 'id' );
+		$this->assertContains( $surviving_id, $lesson_ids, 'The surviving lesson should be kept.' );
+		$this->assertNotContains( $deleted_id, $lesson_ids, 'The deleted lesson should be dropped from the structure.' );
+	}
+
+	public function testSaveCourseStructure_WhenModuleLessonDeleted_DropsItAndSaves() {
+		/* Arrange */
+		$this->login_as_teacher();
+		$course_id    = $this->factory->course->create();
+		$surviving_id = $this->factory->lesson->create();
+		$deleted_id   = $this->factory->lesson->create();
+		$structure    = array(
+			array(
+				'type'    => 'module',
+				'title'   => 'Module',
+				'lessons' => array(
+					array(
+						'type'  => 'lesson',
+						'title' => 'Surviving lesson',
+						'id'    => $surviving_id,
+					),
+					array(
+						'type'  => 'lesson',
+						'title' => 'Deleted lesson',
+						'id'    => $deleted_id,
+					),
+				),
+			),
+		);
+
+		// Delete a module lesson while it still appears in the submitted outline.
+		wp_delete_post( $deleted_id, true );
+
+		$request = new WP_REST_Request( 'POST', '/sensei-internal/v1/course-structure/' . $course_id );
+		$request->set_header( 'content-type', 'application/json' );
+		$request->set_body( wp_json_encode( [ 'structure' => $structure ] ) );
+
+		/* Act */
+		$response = $this->server->dispatch( $request );
+
+		/* Assert */
+		$this->assertEquals( 200, $response->get_status() );
+		$module_lesson_ids = wp_list_pluck( $response->get_data()[0]['lessons'], 'id' );
+		$this->assertContains( $surviving_id, $module_lesson_ids, 'The surviving module lesson should be kept.' );
+		$this->assertNotContains( $deleted_id, $module_lesson_ids, 'The deleted module lesson should be dropped.' );
+	}
+
 	public function testSaveCourseStructure_WhenCanEditLesson_RequestIsAuthorized() {
 		/* Arrange */
 		$this->login_as_teacher();

@@ -127,6 +127,14 @@ class Sensei_REST_API_Course_Structure_Controller extends \WP_REST_Controller {
 			}
 
 			if ( 'lesson' === $type ) {
+				// A lesson that no longer exists (for example, it was deleted while it
+				// still appeared in the outline) can't be edited and must not block
+				// saving the rest of the structure. Skip it; saving drops it from the
+				// outline. Lessons that do exist are still permission-checked below.
+				if ( ! get_post( $id ) ) {
+					continue;
+				}
+
 				if ( ! current_user_can( 'edit_post', $id ) ) {
 					return false;
 				}

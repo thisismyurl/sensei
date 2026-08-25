@@ -765,6 +765,11 @@ class Sensei_Course_Structure {
 				return $item;
 			}
 
+			if ( null === $item ) {
+				// The item references a lesson that no longer exists; drop it.
+				continue;
+			}
+
 			$structure[] = $item;
 		}
 
@@ -779,7 +784,7 @@ class Sensei_Course_Structure {
 	 *
 	 * @param array $raw_item Module or lesson as returned by prepare_lesson or prepare_module.
 	 *
-	 * @return array|WP_Error
+	 * @return array|WP_Error|null Null when the item references a lesson that no longer exists and should be dropped.
 	 */
 	private function sanitize_item( array $raw_item ) {
 		$validate = $this->validate_item_structure( $raw_item );
@@ -857,6 +862,11 @@ class Sensei_Course_Structure {
 					return $lesson;
 				}
 
+				if ( null === $lesson ) {
+					// A module lesson that no longer exists; drop it.
+					continue;
+				}
+
 				if ( 'lesson' !== $lesson['type'] ) {
 					return new WP_Error(
 						'sensei_course_structure_invalid_module_lesson',
@@ -870,11 +880,10 @@ class Sensei_Course_Structure {
 			if ( $item['id'] ) {
 				$lesson = get_post( $item['id'] );
 				if ( ! $lesson || in_array( $lesson->post_status, [ 'trash', 'auto-draft' ], true ) || 'lesson' !== $lesson->post_type ) {
-					return new WP_Error(
-						'sensei_course_structure_missing_lesson',
-						// translators: Placeholder is ID for lesson.
-						sprintf( __( 'Lesson with id "%d" was not found', 'sensei-lms' ), $item['id'] )
-					);
+					// The lesson no longer exists (for example, it was deleted while it
+					// still appeared in the outline). Signal the caller to drop it from
+					// the structure rather than failing the entire save.
+					return null;
 				}
 			}
 			$item['initialContent'] = ! empty( $raw_item['initialContent'] ) ? trim( wp_kses_post( $raw_item['initialContent'] ) ) : null;
